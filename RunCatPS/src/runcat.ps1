@@ -34,21 +34,55 @@ $cats = @(
     New-Object System.Drawing.Icon -ArgumentList "$path\\resources\\${theme}_cat4.ico"
 )
 
-# タスクトレイアイコンを定期的に差し替えるため、タイマーオブジェクトを作成する
-$timer = New-Object Windows.Forms.Timer
+# CPU使用率を定期的に取得するため、タイマーオブジェクトを作成する
+$cpuTimer = New-Object Windows.Forms.Timer
 
-$script:idx = 0 # タイマーのイベントハンドラからも読み取れるように script スコープで宣言
-$timer.Add_Tick( {
-        $timer.Stop()
+# タイマーのイベントハンドラからも書き込みたい変数を script スコープで宣言
+$script:jobId = $null
+$script:idx = 0 
+$script:cpuUsage = 0.0
+
+$cpuTimer.Add_Tick( {
+        $cpuTimer.Stop()
+
+        # CPU 負荷の取得が GUI プロセスをブロックしないよう、バックグラウンドジョブとして処理を行う
+        $script:jobId = (Start-Job -ScriptBlock {
+                [double]((Get-Counter -Counter  "\Processor(_Total)\% Processor Time").CounterSamples).CookedValue 
+            }).Id 
+
+        $cpuTimer.Start()
+    })
   
+$cpuTimer.Interval = 3000
+$cpuTimer.Start()
+
+# タスクトレイアイコンを任意のタイミングで差し替えるため、タイマーオブジェクトを作成する
+$animateTimer = New-Object Windows.Forms.Timer
+
+$animateTimer.Add_Tick( {
+        $animateTimer.Stop()
+  
+        # 次のコマを表示
         $notifyIcon.Icon = $cats[$script:idx++]
         if ($script:idx -eq 5) { $script:idx = 0 }
 
-        $timer.Start()
+        # CPU 使用率をバックグラウンド処理結果から取得
+        if ($script:jobId -ne $null) {
+            $u = (Receive-Job -Id $script:jobId)
+            # CPU 使用率に変化があったとき
+            if ($u -ne $null) { 
+                $script:cpuUsage = $u 
+                $notifyIcon.Text = $script:cpuUsage
+                # ネコチャンの速さを変更
+                $animateTimer.Interval = (200.0 / [System.Math]::Max(1.0, [System.Math]::Min(20.0, $script:cpuUsage / 5)))
+            }           
+        }
+
+        $animateTimer.Start()
     })
   
-$timer.Interval = 100
-$timer.Start()
+$animateTimer.Interval = 200
+$animateTimer.Start()
 
 # メッセージループで利用する ApplicationContext を作成する
 $applicationContext = New-Object System.Windows.Forms.ApplicationContext
@@ -62,5 +96,6 @@ $notifyIcon.add_Click( {
 # アイコンを押すまで終わらないよう、メッセージループを回す
 [System.Windows.Forms.Application]::Run($applicationContext)
 
-$timer.Stop()
-
+$cpuTimer.Stop()
+$animateTimer.Stop()
+$notifyIcon.Visible = $false
