@@ -34,9 +34,9 @@ $cats = @(
 
 # CPU 負荷の取得が GUI プロセスをブロックしないよう、バックグラウンドジョブとして実行する
 $job = Start-Job -ScriptBlock {
-    Get-Counter -Counter "\Processor(_Total)\% Processor Time" -Continuous | ForEach-Object { 
-        $_.CounterSamples.CookedValue 
-    } 
+    Get-Counter -Counter "\Processor(_Total)\% Processor Time" -Continuous | ForEach-Object {
+        $_.CounterSamples.CookedValue
+    }
 }
 
 # CPU使用率を定期的に取得するため、タイマーオブジェクトを作成する
@@ -54,14 +54,14 @@ $cpuTimer.Add_Tick( {
         $cpuTimer.Start()
     })
 
-$cpuTimer.Interval = 3000
+$cpuTimer.Interval = 3 * 1000
 $cpuTimer.Start()
 
 # タスクトレイアイコンを任意のタイミングで差し替えるため、タイマーオブジェクトを作成する
 $animateTimer = New-Object Windows.Forms.Timer
 
 # タイマーのイベントハンドラからも書き込みたい変数を script スコープで宣言
-$script:idx = 0 
+$script:idx = 0
 
 $animateTimer.Add_Tick( {
         $animateTimer.Stop()
@@ -87,7 +87,7 @@ $applicationContext = New-Object System.Windows.Forms.ApplicationContext
 # アイコンクリック時のイベントハンドラ
 $notifyIcon.add_Click( {
         # メッセージループを終了
-        $applicationContext.ExitThread() 
+        $applicationContext.ExitThread()
     })
 
 # アイコンを押すまで終わらないよう、メッセージループを回す
