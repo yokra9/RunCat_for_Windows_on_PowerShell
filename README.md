@@ -2,7 +2,7 @@
 
 A cute running cat animation on your windows taskbar. Enjoy!
 
-![Demo](RunCat/resources/runcat_demo.gif)
+![Demo](RunCatPS/demo.gif)
 
 ## Changes from the original
 
