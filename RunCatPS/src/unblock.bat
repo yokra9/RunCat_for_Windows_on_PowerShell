@@ -1,0 +1,1 @@
+powershell -Command "Unblock-File -Path runcat.ps1"
